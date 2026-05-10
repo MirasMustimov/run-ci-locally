@@ -1,0 +1,57 @@
+#!/bin/bash
+
+trap "tput cnorm" EXIT
+
+SCRIPTS=("npm run format:check" "npm run lint")
+PIDS=()
+EXIT_CODES=()
+
+for SCRIPT in "${SCRIPTS[@]}"; do
+  FORCE_COLOR=1 $SCRIPT > /dev/null 2>&1 &
+  PIDS+=($!)
+done
+
+GREEN=$'\e[32m'
+RED=$'\e[31m'
+RESET_COLOR=$'\e[0m'
+
+tput civis
+
+while true; do
+  SCRIPT_INDEX=0
+
+  for SCRIPT in "${SCRIPTS[@]}"; do
+    kill -0 ${PIDS[$SCRIPT_INDEX]} 2>/dev/null
+    KILL_CODE=$?
+
+    if [[ $KILL_CODE -ne 0 ]]; then
+      if [[ ! -v EXIT_CODES[$SCRIPT_INDEX] ]]; then
+        wait ${PIDS[$SCRIPT_INDEX]}
+        EXIT_CODES[$SCRIPT_INDEX]=$?
+      fi
+
+      if [[ ${EXIT_CODES[$SCRIPT_INDEX]} -eq 0 ]]; then
+        echo -e "$GREEN$SCRIPT succeded$RESET_COLOR"
+      else
+        echo -e "$RED$SCRIPT failed$RESET_COLOR"
+      fi
+    else
+       echo -e "$SCRIPT running.."
+    fi
+    SCRIPT_INDEX=$((SCRIPT_INDEX + 1))
+  done
+  
+  if [[ ${#EXIT_CODES[@]} -eq ${#SCRIPTS[@]} ]]; then
+    break;
+  fi
+
+  sleep 0.75
+  for SCRIPT in "${SCRIPTS[@]}"; do
+    echo -ne "\e[1A\e[2K"
+  done
+
+  SCRIPT_INDEX=0
+done
+
+tput cnorm
+
