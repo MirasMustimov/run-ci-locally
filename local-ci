@@ -5,6 +5,7 @@ trap "tput cnorm" EXIT
 SCRIPTS=("npm run format:check" "npm run lint")
 PIDS=()
 EXIT_CODES=()
+SOME_FAILED=0
 
 for SCRIPT in "${SCRIPTS[@]}"; do
   FORCE_COLOR=1 $SCRIPT > /dev/null 2>&1 &
@@ -33,6 +34,7 @@ while true; do
       if [[ ${EXIT_CODES[$SCRIPT_INDEX]} -eq 0 ]]; then
         echo -e "$GREEN$SCRIPT succeded$RESET_COLOR"
       else
+        SOME_FAILED=1
         echo -e "$RED$SCRIPT failed$RESET_COLOR"
       fi
     else
