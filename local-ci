@@ -68,11 +68,17 @@ done
 SCRIPT_INDEX=0
 for SCRIPT in "${SCRIPTS[@]}"; do
   if [[ ${EXIT_CODES[$SCRIPT_INDEX]} -ne 0 ]]; then
-    echo -e "$(cat ${OUTPUT_FILES[$SCRIPT_INDEX]})"
+    cat ${OUTPUT_FILES[$SCRIPT_INDEX]}
   fi
-
   SCRIPT_INDEX=$((SCRIPT_INDEX + 1))
 done
 
 tput cnorm
 
+if [[ $SOME_FAILED -eq 0 ]]; then
+  if git diff --quiet; then
+    gum confirm "Push and merge PR?" && git push && gh pr merge -md
+  else
+    git status
+  fi
+fi
