@@ -65,6 +65,8 @@ while true; do
   SCRIPT_INDEX=0
 done
 
+tput cnorm
+
 SCRIPT_INDEX=0
 for SCRIPT in "${SCRIPTS[@]}"; do
   if [[ ${EXIT_CODES[$SCRIPT_INDEX]} -ne 0 ]]; then
@@ -72,8 +74,6 @@ for SCRIPT in "${SCRIPTS[@]}"; do
   fi
   SCRIPT_INDEX=$((SCRIPT_INDEX + 1))
 done
-
-tput cnorm
 
 if [[ $SOME_FAILED -eq 0 ]]; then
   if git diff --quiet; then
