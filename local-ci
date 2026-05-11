@@ -1,20 +1,28 @@
 #!/bin/bash
 
+random_id () {
+  echo "$$-$RANDOM"
+}
+
 trap "tput cnorm" EXIT
 
-SCRIPTS=("npm run format:check" "npm run lint")
+SCRIPTS=("npm run format:check" "npm run lint" "npm run type-check")
 PIDS=()
 EXIT_CODES=()
+OUTPUT_FILES=()
 SOME_FAILED=0
+REFRESH_SECONDS=1
 
 for SCRIPT in "${SCRIPTS[@]}"; do
-  FORCE_COLOR=1 $SCRIPT > /dev/null 2>&1 &
+  OUTPUT_FILE="$(random_id).txt"
+  FORCE_COLOR=1 $SCRIPT > $OUTPUT_FILE 2>&1 &
   PIDS+=($!)
+  OUTPUT_FILES+=($OUTPUT_FILE)
 done
 
-GREEN=$'\e[32m'
-RED=$'\e[31m'
-RESET_COLOR=$'\e[0m'
+GREEN="\e[32m"
+RED="\e[31m"
+RESET_COLOR="\e[0m"
 
 tput civis
 
@@ -32,25 +40,26 @@ while true; do
       fi
 
       if [[ ${EXIT_CODES[$SCRIPT_INDEX]} -eq 0 ]]; then
-        echo -e "$GREEN$SCRIPT succeded$RESET_COLOR"
+        echo -e "\r\e[K$GREEN$SCRIPT succeded$RESET_COLOR"
       else
         SOME_FAILED=1
-        echo -e "$RED$SCRIPT failed$RESET_COLOR"
+        echo -e "\r\e[K$RED$SCRIPT failed$RESET_COLOR"
       fi
     else
-       echo -e "$SCRIPT running.."
+       echo -e "\r\e[K$SCRIPT running.."
     fi
     SCRIPT_INDEX=$((SCRIPT_INDEX + 1))
   done
-  
+
   if [[ ${#EXIT_CODES[@]} -eq ${#SCRIPTS[@]} ]]; then
     break;
   fi
 
-  sleep 0.75
   for SCRIPT in "${SCRIPTS[@]}"; do
-    echo -ne "\e[1A\e[2K"
+    echo -ne "\e[1A"
   done
+
+  sleep $REFRESH_SECONDS
 
   SCRIPT_INDEX=0
 done
