@@ -4,13 +4,9 @@ GREEN="\e[32m"
 RED="\e[31m"
 RESET_COLOR="\e[0m"
 
-random_id () {
-  echo "$$-$RANDOM"
-}
-
 trap "tput cnorm" EXIT
 
-SCRIPTS=("npm run format:check" "npm run lint")
+SCRIPTS=("npm run format:check" "npm run lint" "npm run type-check")
 PIDS=()
 EXIT_CODES=()
 OUTPUT_FILES=()
@@ -19,8 +15,8 @@ SOME_FAILED=0
 REFRESH_SECONDS=1
 
 for SCRIPT in "${SCRIPTS[@]}"; do
-  OUTPUT_FILE="/tmp/ci-$(random_id)"
-  FORCE_COLOR=1 $SCRIPT > $OUTPUT_FILE 2>&1 &
+  OUTPUT_FILE=$(mktemp -t ci.XXXXX)
+  FORCE_COLOR=1 $SCRIPT > "$OUTPUT_FILE" 2>&1 &
   PIDS+=($!)
   OUTPUT_FILES+=($OUTPUT_FILE)
 done
@@ -41,7 +37,7 @@ while true; do
       fi
 
       if [[ ${EXIT_CODES[$SCRIPT_INDEX]} -eq 0 ]]; then
-        echo -e "\r\e[K$GREEN$SCRIPT succeded$RESET_COLOR"
+        echo -e "\r\e[K$GREEN$SCRIPT succeeded$RESET_COLOR"
       else
         echo -e "\r\e[K$RED$SCRIPT failed$RESET_COLOR"
         SOME_FAILED=1
@@ -61,8 +57,6 @@ while true; do
   done
 
   sleep $REFRESH_SECONDS
-
-  SCRIPT_INDEX=0
 done
 
 tput cnorm
@@ -70,13 +64,13 @@ tput cnorm
 SCRIPT_INDEX=0
 for SCRIPT in "${SCRIPTS[@]}"; do
   if [[ ${EXIT_CODES[$SCRIPT_INDEX]} -ne 0 ]]; then
-    cat ${OUTPUT_FILES[$SCRIPT_INDEX]}
+    cat "${OUTPUT_FILES[$SCRIPT_INDEX]}"
   fi
   SCRIPT_INDEX=$((SCRIPT_INDEX + 1))
 done
 
 if [[ $SOME_FAILED -eq 0 ]]; then
-  if git diff --quiet; then
+  if git diff --cached --quiet && git diff --quiet; then
     gum confirm "Push and merge PR?" && git push && gh pr merge -md
   else
     git status
