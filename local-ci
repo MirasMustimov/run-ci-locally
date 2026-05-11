@@ -19,7 +19,7 @@ SOME_FAILED=0
 REFRESH_SECONDS=1
 
 for SCRIPT in "${SCRIPTS[@]}"; do
-  OUTPUT_FILE="/tmp/ci-$(random_id).txt" # do we need the extension?
+  OUTPUT_FILE="/tmp/ci-$(random_id)"
   FORCE_COLOR=1 $SCRIPT > $OUTPUT_FILE 2>&1 &
   PIDS+=($!)
   OUTPUT_FILES+=($OUTPUT_FILE)
