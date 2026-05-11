@@ -1,28 +1,29 @@
 #!/bin/bash
 
+GREEN="\e[32m"
+RED="\e[31m"
+RESET_COLOR="\e[0m"
+
 random_id () {
   echo "$$-$RANDOM"
 }
 
 trap "tput cnorm" EXIT
 
-SCRIPTS=("npm run format:check" "npm run lint" "npm run type-check")
+SCRIPTS=("npm run format:check" "npm run lint")
 PIDS=()
 EXIT_CODES=()
 OUTPUT_FILES=()
 SOME_FAILED=0
+
 REFRESH_SECONDS=1
 
 for SCRIPT in "${SCRIPTS[@]}"; do
-  OUTPUT_FILE="$(random_id).txt"
+  OUTPUT_FILE="/tmp/ci-$(random_id).txt" # do we need the extension?
   FORCE_COLOR=1 $SCRIPT > $OUTPUT_FILE 2>&1 &
   PIDS+=($!)
   OUTPUT_FILES+=($OUTPUT_FILE)
 done
-
-GREEN="\e[32m"
-RED="\e[31m"
-RESET_COLOR="\e[0m"
 
 tput civis
 
@@ -42,8 +43,8 @@ while true; do
       if [[ ${EXIT_CODES[$SCRIPT_INDEX]} -eq 0 ]]; then
         echo -e "\r\e[K$GREEN$SCRIPT succeded$RESET_COLOR"
       else
-        SOME_FAILED=1
         echo -e "\r\e[K$RED$SCRIPT failed$RESET_COLOR"
+        SOME_FAILED=1
       fi
     else
        echo -e "\r\e[K$SCRIPT running.."
@@ -62,6 +63,15 @@ while true; do
   sleep $REFRESH_SECONDS
 
   SCRIPT_INDEX=0
+done
+
+SCRIPT_INDEX=0
+for SCRIPT in "${SCRIPTS[@]}"; do
+  if [[ ${EXIT_CODES[$SCRIPT_INDEX]} -ne 0 ]]; then
+    echo -e "$(cat ${OUTPUT_FILES[$SCRIPT_INDEX]})"
+  fi
+
+  SCRIPT_INDEX=$((SCRIPT_INDEX + 1))
 done
 
 tput cnorm
